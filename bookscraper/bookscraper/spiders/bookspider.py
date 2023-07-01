@@ -7,10 +7,18 @@ Course created by Joe Kearney.
 import scrapy
 from bookscraper.items import BookItem
 
+
 class BookspiderSpider(scrapy.Spider):
     name = "bookspider"
     allowed_domains = ["books.toscrape.com"]
     start_urls = ["https://books.toscrape.com/"]
+
+    # set output file setting, overrides settings.py
+    custom_settings = {
+        "FEEDS": {
+            "booksdata.json": {"format": "json", "overwrite": True}
+        }
+    }
 
     def parse(self, response):
         # look for all articles of class "product_pod" and store as list of books
@@ -38,12 +46,12 @@ class BookspiderSpider(scrapy.Spider):
             else:
                 next_page_url = f"{self.start_urls[0]}catalogue/{next_page}"
 
-            # go to next page address and repeat parse function    
+            # go to next page address and repeat parse function
             yield response.follow(next_page_url, callback=self.parse)
-
 
     def parse_book_page(self, response):
 
+        # retrieve list of all table rows
         table_rows = response.css("table tr")
         book_item = BookItem()
 
@@ -57,8 +65,10 @@ class BookspiderSpider(scrapy.Spider):
         book_item["availability"] = table_rows[5].css("td ::text").get()
         book_item["num_reviews"] = table_rows[6].css("td ::text").get()
         book_item["stars"] = response.css("p.star-rating").attrib["class"]
-        book_item["category"] = response.xpath("//ul[@class='breadcrumb']/li[@class='active']/preceding-sibling::li[1]/a/text()").get()
-        book_item["description"] = response.xpath("//div[@id='product_description']/following-sibling::p/text()").get()
+        book_item["category"] = response.xpath(
+            "//ul[@class='breadcrumb']/li[@class='active']/preceding-sibling::li[1]/a/text()").get()
+        book_item["description"] = response.xpath(
+            "//div[@id='product_description']/following-sibling::p/text()").get()
         book_item["price"] = response.css("p.price_color ::text").get()
 
         yield book_item
